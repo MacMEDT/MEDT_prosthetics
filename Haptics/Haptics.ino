@@ -30,18 +30,18 @@ void loop() {
     Serial.println(fsr[i]);
 
 
-    intensity[i] = (int)((fsr[i] / 1050.0)*255.0);
+    intensity[i] = (int)((fsr[i] / 1050.0)*255.0); //multiply actual force by a factor of the possible max force
 
     if (lastreading[i] == 0 && fsr[i] >= 20){
-      intensity[i] = 200; //prvovide a higher amplitude pulse at the beginning of touch
+      intensity[i] = 200; //provide a higher amplitude pulse at the beginning of touch
     } /*else if (intensity[i] < 100 && intensity[i] >0){
       intensity[i] = 110; //sets minimum for PWM to 100 because intensity below ~70 doesn't actually produce vibration.
     }*/
-    if (intensity[i] < 0){
+    if (intensity[i] < 0){ //remove negative intensities
       intensity[i] = 0;
     }
 
-    intensity[i] = intensity[i] - (int)intensity_mod[i];
+    intensity[i] = intensity[i] - (int)intensity_mod[i]; //applying intensity modification factor
     if (intensity[i] < 70 && intensity[i] >20){
       intensity[i] = 80;
     } 
@@ -55,10 +55,10 @@ void loop() {
 
 
 
-  analogWrite(5, intensity[0]); // update ;
+  analogWrite(5, intensity[0]); // write the intensity to vibration motors
   analogWrite(6, intensity[1]);
 
-  for(int i = 0; i<n; i++){
+  for(int i = 0; i<n; i++){ //deducing the intensity modification factor
     if (fsr[i] <10){
       lastreading[i] = 0; // checks if there's no force, which resets the modifications and flags that the last reading was 0 
       timer[i] = 0;
@@ -67,7 +67,7 @@ void loop() {
       lastreading[i] = 1; //sustained pressure will result in the intensity tapering off. 
       timer[i]+=50;
       if (timer[i] > 5000){
-        intensity_mod[i]+=0.25;
+        intensity_mod[i]+=0.25; //increase the intensity modification factor over time
       }
     }
   }
