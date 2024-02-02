@@ -1,5 +1,7 @@
 #include "Joint.h"
 
+#define NUM_JOINTS 1
+
 class JointControlSystem
 {
 
@@ -19,10 +21,11 @@ public:
     };
 
     int current_grip;
-    Joint joints[3]; // array of defined joints
+    Joint joints[NUM_JOINTS]; // array of defined joints
 
     JointControlSystem();
 
     void processSignals(float signal[]);
+    void moveJoints();
     int getGrip();
 };
