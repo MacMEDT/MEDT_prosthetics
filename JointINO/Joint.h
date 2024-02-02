@@ -1,12 +1,13 @@
 #ifndef JOINT_H
 #define JOINT_H
+#include <Servo.h>
 
 class Joint
 {
 public:
-    Joint(int servoPin);
+    Joint();
 
-    // to read/write _angle
+    void setPin(int pin);
     float getAngle();
     void setAngle(float newAngle);
     float calculateAngle(float inputSignals[]);
@@ -14,6 +15,7 @@ public:
 protected:
     int _servoPin;
     float _angle;
+    Servo servo;
 };
 
 // ---------------------
@@ -23,31 +25,19 @@ protected:
 class ThumbJoint : public Joint
 {
 public:
-    ThumbJoint(int servoPin) : Joint(servoPin){};
+    ThumbJoint() : Joint(){};
 };
 
 class IndexJoint : public Joint
 {
 public:
-    IndexJoint(int servoPin) : Joint(servoPin){};
+    IndexJoint() : Joint(){};
 };
 
 class OtherDigJoint : public Joint
 {
 public:
-    OtherDigJoint(int servoPin) : Joint(servoPin){};
-};
-
-class WristFlexJoint : public Joint
-{
-public:
-    WristFlexJoint(int servoPin) : Joint(servoPin){};
-};
-
-class WristRotJoint : public Joint
-{
-public:
-    WristRotJoint(int servoPin) : Joint(servoPin){};
+    OtherDigJoint() : Joint(){};
 };
 
 #endif
