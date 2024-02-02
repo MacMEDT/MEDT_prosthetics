@@ -24,7 +24,6 @@ void Joint::setAngle(float angle)
         for (int pos = _angle; pos <= angle; pos += 1)
         {
             servo.write(pos);
-            Serial.println(pos);
             delay(25);
         }
     }

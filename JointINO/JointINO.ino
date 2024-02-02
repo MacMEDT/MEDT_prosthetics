@@ -1,16 +1,20 @@
 #include "JointControlSystem.h"
 #include "Joint.h"
 
-//JointControlSystem jcs;
-Joint j;
+JointControlSystem jcs;
+float emgData[1];
+
+int TEST_PIN = 9;
+float received;
 
 void setup() {
   Serial.begin(9600);
-  j.setPin(9);
-
+  jcs.joints[0].setPin(TEST_PIN);
 }
 
 void loop() {
-  j.setAngle(90);
-  j.setAngle(0);
+  emgData[0] = 0.2;
+  jcs.processSignals(emgData);
+  emgData[0] = 0.4;
+  jcs.processSignals(emgData);
 }

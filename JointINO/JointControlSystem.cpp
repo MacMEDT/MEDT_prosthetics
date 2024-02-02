@@ -1,24 +1,31 @@
-#include "./JointControlSystem.h"
+#include "JointControlSystem.h"
+#include <Arduino.h>
 
-JointControlSystem::JointControlSystem()
+JointControlSystem::JointControlSystem() {}
+
+void JointControlSystem::processSignals(float signal[])
 {
-    joints[THUMB] = ThumbJoint(THUMB);
-    joints[INDEX] = IndexJoint(INDEX);
-    joints[OTHER] = OtherDigJoint(OTHER);
-}
+    // TODO: only using signal[0] for now
+    float emg = signal[0];
 
-void JointControlSystem::processSignals(float signal[]){
-    //To Do later
+    // values from emg_real.txt generally 0.2-0.5
+    if (emg > 0 && emg < 0.35)
+    {
+        current_grip = GRIP_FLAT;
+        joints[INDEX].setAngle(0);
+    }
+    else if (emg >= 0.35)
+    {
+        current_grip = GRIP_FIST;
+        joints[INDEX].setAngle(90);
+    }
+    else
+    {
+        current_grip = GRIP_NONE;
+    }
 };
-
-void JointControlSystem::setGrip(float emg){
-    //values from emg_real.txt generally 0.2-0.5
-    if (emg>0 && emg<0.35){grip = GRIP_FLAT;} 
-    else if (emg>=0.35){grip = GRIP_FIST;} 
-    else{grip = GRIP_NONE;}
-}
 
 int JointControlSystem::getGrip()
 {
-    return grip;
+    return current_grip;
 };
