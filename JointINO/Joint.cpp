@@ -19,22 +19,14 @@ float Joint::getAngle() { return _angle; }
 // Move this joint to the angle specified
 void Joint::setAngle(float angle)
 {
-    if (angle > _angle)
+    int direction = (angle > _angle) ? 1 : -1;
+
+    for (int pos = _angle; pos != angle; pos += direction)
     {
-        for (int pos = _angle; pos <= angle; pos += 1)
-        {
-            servo.write(pos);
-            delay(25);
-        }
+        servo.write(pos);
+        delay(25);
     }
-    else
-    {
-        for (int pos = _angle; pos >= angle; pos -= 1)
-        {
-            servo.write(pos);
-            delay(25);
-        }
-    }
+
     _angle = angle;
 }
 
