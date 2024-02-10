@@ -1,4 +1,5 @@
 #include <Servo.h>
+#include <cmath>
 #define fsrpin1 A0
 #define fsrpin2 A1
 #define fsrpin3 A2
@@ -7,19 +8,26 @@
 #define n 1 // number of force sensors added
 
 Servo servo1;
-int pos=0;
+int pos = 0;
 int val = 0;
 int target;
 
 int fsr[n]; // array for storing force sensor readings
 int lastreading[n];
- 
 int intensity_mod[n];
 int timer[n];
 
 bool haptics();
 bool direction;
 bool flag = false;
+
+// signal conditioning
+int const THRES_HIGH = 160;
+int const THRES_LOW = 80;
+int const NUM_AVG = 50;
+int emgVals[NUM_AVG]; //array to store trailing average 
+int counter = 0;
+int sum = 0;
 
 void setup() {
   // put your setup code here, to run once:
@@ -32,9 +40,8 @@ void setup() {
   pinMode(10, OUTPUT); // vibration motor 2
   pinMode(11, OUTPUT); // vibration motor 2
   direction = true; //closing = true, opening = false
-  for (int i = 0; i<n; i++){
-    fsr[i] = 0;
-  }
+  for (int i = 0; i<n; i++){ fsr[i] = 0;}
+  for (int i = 0; i<NUM_AVG; i++){ emgVals[i] = 0;}
 }
 
 void loop() {
@@ -71,7 +78,24 @@ void loop() {
     }
   }
   delay(5);
+}
 
+/*
+TO DO:
+  Take out 464 DC offset
+  Take absolute value
+  Take 50-point trailing average
+*/
+int processEMG(int val)
+{
+  val -= 464;
+  val = abs(val);
+  sum = sum - emgVal[counter] + val;
+  emgVal[counter] = val;
+  counter++;
+  counter = counter%50;
+  average = sum/NUM_AVG;
+  return average;
 }
 
 bool haptics(){
@@ -85,18 +109,6 @@ bool haptics(){
  
   int intensity[n];
   for (int i = 0; i<n; i++){
- 
-   /* Serial.print(fsr[0]);
-    Serial.print(", ");
-    Serial.print(fsr[1]);
-    Serial.print(", ");
-    Serial.print(fsr[2]);
-    Serial.print(", ");
-    Serial.print(fsr[3]);
-    Serial.print(", ");
-    Serial.print(fsr[4]);
-    Serial.println();*/
- 
     intensity[i] = (int)((fsr[i] / 300.0)*255.0); //multiply actual force by a factor of the possible max force
  
     if (lastreading[i] == 0 && fsr[i] >= 20){
@@ -132,7 +144,6 @@ bool haptics(){
       Serial.println("FSR number: " + String(i));
       if (timer[i] > 500 and fsr[0]>400 or fsr[1]>400 or fsr[3]>400){
       intensity_mod[i]+=10; //increase the intensity modification factor over time
-     
       }
       
     }
@@ -142,7 +153,6 @@ bool haptics(){
   //analogWrite(3, intensity[2]);
   //analogWrite(10, intensity[3]);
   //analogWrite(11, intensity[4]);
-  
   }
  
   delay(20);
