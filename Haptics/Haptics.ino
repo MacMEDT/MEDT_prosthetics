@@ -3,24 +3,24 @@
 #define fsrpin3 A2
 #define fsrpin4 A3
 #define fsrpin5 A4
-#define n 1 // number of force sensors added
+#define n 2 // number of force sensors added
 
   //int n =2; // number of force sensors
   int fsr[n]; // array for storing force sensor readings
   int lastreading[n];
-  int queue[20]; //to store past fsr values
+  int queue[n][20]; //to store past fsr values
+  int average[n];
 
   int intensity_mod[n];
   int intensity[n];
   int timer[n];
   int counter =0;
-  int average = 0;
 
 void setup() {
   Serial.begin(9600);
   pinMode(5, OUTPUT); // vibration motor 1
-  /*pinMode(6, OUTPUT); // vibration motor 2
-  pinMode(3, OUTPUT); // vibration motor 2
+  pinMode(6, OUTPUT); // vibration motor 2
+  /*pinMode(3, OUTPUT); // vibration motor 2
   pinMode(10, OUTPUT); // vibration motor 2
   pinMode(11, OUTPUT); // vibration motor 2*/
   for (int i = 0; i<n; i++){
@@ -32,17 +32,20 @@ void loop() {
 
 
   fsr[0] = analogRead(fsrpin1);
-  /*fsr[1] = analogRead(fsrpin2);
-  fsr[2] = analogRead(fsrpin3);
+  fsr[1] = analogRead(fsrpin2);
+  /*fsr[2] = analogRead(fsrpin3);
   fsr[3] = analogRead(fsrpin4);
   fsr[4] = analogRead(fsrpin5);   */  
 
+  for (int j=0; j< n; j++) {
+    queue[j][counter] = fsr[j];
+      for (int i=0; i<20; i++) {
+      average[j]+=queue[j][i];
+    }      
+    average[j] = average[j]/20;
+  }
+  
 
-  queue[counter] = fsr[0];
-  for (int i=0; i<20; i++) {
-      average+=queue[i];
-  }      
-  average = average/20;
 
 
   for (int i = 0; i<n; i++){
@@ -51,13 +54,13 @@ void loop() {
     if (lastreading[i] == 0 && fsr[i] >= 20){
       intensity[i] = 200; //provide a higher amplitude pulse at the beginning of touch
     } 
-      Serial.print(fsr[0]);
+      Serial.print(fsr[i]);
       Serial.print(", ");    
-      Serial.print(intensity[0]);
+      Serial.print(intensity[i]);
       Serial.print(", ");
-      Serial.print(intensity_mod[0]);
+      Serial.print(intensity_mod[i]);
       Serial.print(", ");
-      Serial.print(average);      
+      Serial.print(average[i]);      
       Serial.println();
 
 
@@ -80,12 +83,12 @@ void loop() {
       lastreading[i] = 1; //sustained pressure will result in the intensity tapering off. 
       timer[i]+=50;
 
-    if (fsr[0] <= average+80 && fsr[0] >= average-80){ //MUST TEST AND DETERMINE INTERVAL RANGE
+    if (fsr[i] <= average[i]+80 && fsr[i] >= average[i]-80){ //MUST TEST AND DETERMINE INTERVAL RANGE
       intensity_mod[i]+=10; //increase the intensity modification factor over time
       
     }
     else {
-      intensity_mod[i] -= 20;
+      intensity_mod[i] -= 50;
       if (intensity_mod[i]<0) {
         intensity_mod[i]=0;
       }
@@ -97,6 +100,7 @@ void loop() {
   analogWrite(10, intensity[3]);
   analogWrite(11, intensity[4]);
   }
+  Serial.println();
   counter = (counter+1)%20; //resets coutner to 0 when counter = 20
   delay(200);
 }
