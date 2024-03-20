@@ -50,7 +50,7 @@ void setup()
 void loop() 
 {
   Serial.print("loop");
-
+  
   // Read value from monitor - temporary
   Serial.println(Serial.available());
   while (Serial.available() == 0)
@@ -58,10 +58,12 @@ void loop()
     haptics(); // check if there is pressure even when the motor is not moving
   }
   val = Serial.parseFloat();
+  
+  val = readEMG(val);
+  
+  haptics();
 
-  //val = readEMG();
-
-  if(!isClosing && val>5){ // opening 
+  if(!isClosing && val<=80){ // opening
     Serial.print("IF 1");
     isClosing = !isClosing; 
     Serial.println(isClosing);
@@ -74,7 +76,7 @@ void loop()
       delay(5);
     }
   }
-  else if(val>5 && isClosing && !isPressure){ // closing
+  else if(val>=160 && isClosing && !isPressure){ // closing
     Serial.println("IF 2");
     isClosing = !isClosing;
     Serial.println(isClosing);
@@ -90,11 +92,12 @@ void loop()
   }
   delay(20);
 }
+//high 160, low 80
 
 //Reads the value in from the EMG and turns it into usable output
-int readEMG()
+int readEMG(val)
 {
-  val = abs(analogRead(EMG_PIN) - 464);
+  //val = abs(analogRead(EMG_PIN) - 464);
   sum = sum - emgVal[counter] + val;
   emgVal[counter] = val;
   counter = (counter+1) %50;
