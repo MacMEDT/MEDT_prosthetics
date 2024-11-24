@@ -1,144 +1,175 @@
-// Calibration.ino
+#include <EEPROM.h> // Required for saving calibration data
 
 // =======================
 // Calibration Variables
 // =======================
-
-// These variables are used in the main sketch, so we declare them as global.
 int THRES_LOW = 80;    // Default low threshold (will be overwritten by calibration)
 int THRES_HIGH = 160;  // Default high threshold (will be overwritten by calibration)
 
-// EMG Pin Definition (Ensure this matches your main sketch)
+// EMG Pin Definition (Ensure this matches your hardware setup)
 #define EMG_PIN A3
 
+// LED Pins for Calibration Phases
+#define LED_GREEN 9    // Relaxed phase
+#define LED_YELLOW 10  // Flexed phase
+#define LED_RED 11     // Initial Flex phase
+
 // =======================
-// Calibration Function Prototypes
+// Function Prototypes
 // =======================
 void calibrateEMG();
 int calculateOffset();
+int calculateBaseline(int offset);
+int calculateInitialFlex(int offset);
+void indicatePhase(int ledPin);
+void blinkLED(int ledPin, int times);
 bool loadCalibration(int &offset, int &thres_low, int &thres_high);
 void saveCalibration(int offset, int thres_low, int thres_high);
 
 // =======================
+// Arduino Setup and Loop
+// =======================
+void setup() {
+  // Initialize LED pins
+  pinMode(LED_GREEN, OUTPUT);
+  pinMode(LED_YELLOW, OUTPUT);
+  pinMode(LED_RED, OUTPUT);
+
+  int offset;
+  // Attempt to load existing calibration data
+  if (loadCalibration(offset, THRES_LOW, THRES_HIGH)) {
+    // Indicate successful calibration load with a quick blink
+    blinkLED(LED_GREEN, 3);
+  } else {
+    // Indicate calibration is needed with a slow blink
+    blinkLED(LED_RED, 3);
+    // Start calibration process
+    calibrateEMG();
+  }
+}
+
+void loop() {
+  // Main code (replace with your application logic)
+}
+
+// =======================
 // Calibration Function Implementations
 // =======================
-
-/**
- * @brief Initiates the EMG calibration process.
- * Guides the user through relaxation and flexion phases to determine thresholds.
- */
-void calibrateEMG() 
-{
+void calibrateEMG() {
   int offset = calculateOffset();
-  
-  Serial.println("Starting calibration. Please relax your arm and remain still.");
-  delay(2000); // Give user time to relax
 
-  // Collect Relaxed EMG Readings
-  int relaxedSum = 0;
-  int relaxedCount = 100; // Number of readings for relaxed baseline
-  for (int i = 0; i < relaxedCount; i++) 
-  {
-    int reading = abs(analogRead(EMG_PIN) - offset);
-    relaxedSum += reading;
-    delay(10);
-  }
-  int relaxedBaseline = relaxedSum / relaxedCount;
-  Serial.print("Relaxed Baseline: ");
-  Serial.println(relaxedBaseline);
+  // Step 1: Relaxed Baseline
+  indicatePhase(LED_GREEN);
+  blinkLED(LED_GREEN, 2); // Blink twice to indicate relaxed phase
+  delay(1000); // Short delay before starting
+  int relaxedBaseline = calculateBaseline(offset);
 
-  Serial.println("Calibration step 1 complete. Now, please flex your arm.");
-  delay(2000); // Give user time to flex
+  // Step 2: Flexed Baseline
+  indicatePhase(LED_YELLOW);
+  blinkLED(LED_YELLOW, 2); // Blink twice to indicate flexed phase
+  delay(1000); // Short delay before starting
+  int flexedBaseline = calculateBaseline(offset);
 
-  // Collect Flexed EMG Readings
-  int flexedSum = 0;
-  int flexedCount = 100; // Number of readings for flexed baseline
-  for (int i = 0; i < flexedCount; i++) 
-  {
-    int reading = abs(analogRead(EMG_PIN) - offset);
-    flexedSum += reading;
-    delay(10);
-  }
-  int flexedBaseline = flexedSum / flexedCount;
-  Serial.print("Flexed Baseline: ");
-  Serial.println(flexedBaseline);
-
-  // Validate Calibration
-  if (flexedBaseline <= relaxedBaseline) 
-  {
-    Serial.println("Error: Flexed baseline is not higher than relaxed baseline. Please retry calibration.");
+  // Validate Baselines
+  if (flexedBaseline <= relaxedBaseline) {
+    // Indicate error with LED_RED blinking
+    blinkLED(LED_RED, 5);
     return;
   }
 
-  // Set Thresholds
-  THRES_LOW = relaxedBaseline + static_cast<int>((flexedBaseline - relaxedBaseline) * 0.25);
-  THRES_HIGH = relaxedBaseline + static_cast<int>((flexedBaseline - relaxedBaseline) * 0.75);
+  // Step 3: Initial Flex Peak
+  indicatePhase(LED_RED);
+  blinkLED(LED_RED, 2); // Blink twice to indicate initial flex phase
+  int initialFlex = calculateInitialFlex(offset);
 
-  Serial.print("THRES_LOW set to: ");
-  Serial.println(THRES_LOW);
-  Serial.print("THRES_HIGH set to: ");
-  Serial.println(THRES_HIGH);
+  // Threshold Calculations
+  THRES_HIGH = (initialFlex - flexedBaseline) * 0.5 + flexedBaseline;
+  THRES_LOW = flexedBaseline * 0.75;
 
-  // Save Calibration Data to EEPROM
+  // Indicate successful calibration
+  blinkLED(LED_GREEN, 5);
+  // Save calibration data to EEPROM
   saveCalibration(offset, THRES_LOW, THRES_HIGH);
-  Serial.println("Calibration complete and saved.");
 }
 
-/**
- * @brief Calculates the dynamic offset based on initial EMG readings.
- * 
- * @return int Calculated offset value.
- */
-int calculateOffset() 
-{
-  Serial.println("Calibrating offset. Please remain still.");
-  delay(2000); // Allow user to stabilize
-  
+// =======================
+// Helper Functions
+// =======================
+
+// Calculates the offset value by averaging multiple readings while the user remains still
+int calculateOffset() {
+  blinkLED(LED_GREEN, 1); // Indicate offset calibration
+  delay(1000); // Allow user to stabilize
+
   int offsetSum = 0;
   int offsetCount = 100; // Number of readings for offset calculation
-  for (int i = 0; i < offsetCount; i++) 
-  {
+  for (int i = 0; i < offsetCount; i++) {
     offsetSum += analogRead(EMG_PIN);
     delay(10);
   }
   int offset = offsetSum / offsetCount;
-  Serial.print("Calculated Offset: ");
-  Serial.println(offset);
   return offset;
 }
 
-/**
- * @brief Loads calibration data from EEPROM.
- * 
- * @param offset Reference to store the loaded offset.
- * @param thres_low Reference to store the loaded low threshold.
- * @param thres_high Reference to store the loaded high threshold.
- * @return true If calibration data is valid and loaded successfully.
- * @return false If calibration data is invalid or not present.
- */
-bool loadCalibration(int &offset, int &thres_low, int &thres_high) 
-{
+// Calculates the baseline (either relaxed or flexed) by averaging readings over time
+int calculateBaseline(int offset) {
+  int sum = 0;
+  int count = 100; // Number of readings for baseline calculation
+  for (int i = 0; i < count; i++) {
+    int reading = abs(analogRead(EMG_PIN) - offset);
+    sum += reading;
+    delay(10);
+  }
+  int baseline = sum / count;
+  return baseline;
+}
+
+// Captures the initial flex peak by recording the highest value over a period
+int calculateInitialFlex(int offset) {
+  int maxPeak = 0;
+  unsigned long startTime = millis();
+  while (millis() - startTime < 5000) { // Record for 5 seconds
+    int reading = abs(analogRead(EMG_PIN) - offset);
+    if (reading > maxPeak) {
+      maxPeak = reading;
+    }
+    delay(10);
+  }
+  return maxPeak;
+}
+
+// Turns on the specified LED to indicate the current phase
+void indicatePhase(int ledPin) {
+  digitalWrite(LED_GREEN, LOW);
+  digitalWrite(LED_YELLOW, LOW);
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(ledPin, HIGH);
+}
+
+// Blinks the specified LED a given number of times for user feedback
+void blinkLED(int ledPin, int times) {
+  for (int i = 0; i < times; i++) {
+    digitalWrite(ledPin, HIGH);
+    delay(300);
+    digitalWrite(ledPin, LOW);
+    delay(300);
+  }
+}
+
+// Loads calibration data from EEPROM; returns true if successful
+bool loadCalibration(int &offset, int &thres_low, int &thres_high) {
   EEPROM.get(0, offset);
   EEPROM.get(2, thres_low);
   EEPROM.get(4, thres_high);
-  
-  // Simple validation: THRES_HIGH should be greater than THRES_LOW
-  if (thres_high > thres_low) 
-  {
+
+  if (thres_high > thres_low) {
     return true;
   }
   return false;
 }
 
-/**
- * @brief Saves calibration data to EEPROM.
- * 
- * @param offset The offset value to save.
- * @param thres_low The low threshold to save.
- * @param thres_high The high threshold to save.
- */
-void saveCalibration(int offset, int thres_low, int thres_high) 
-{
+// Saves calibration data to EEPROM
+void saveCalibration(int offset, int thres_low, int thres_high) {
   EEPROM.put(0, offset);
   EEPROM.put(2, thres_low);
   EEPROM.put(4, thres_high);
