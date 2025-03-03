@@ -10,9 +10,9 @@ int THRES_HIGH = 160;  // Default high threshold (will be overwritten by calibra
 #define EMG_PIN A3
 
 // LED Pins for Calibration Phases
-#define LED_GREEN 9    // Relaxed phase
-#define LED_YELLOW 10  // Flexed phase
-#define LED_RED 11     // Initial Flex phase
+#define LED_GREEN 8    // Relaxed phase
+#define LED_YELLOW 9  // Flexed phase
+#define LED_RED 10     // Initial Flex phase
 
 // =======================
 // Function Prototypes
