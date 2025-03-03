@@ -17,7 +17,7 @@ int THRES_HIGH = 160;  // Default high threshold (will be overwritten by calibra
 // =======================
 // Function Prototypes
 // =======================
-void calibrateEMG();
+int calibrateEMG();
 int calculateOffset();
 int calculateBaseline(int offset);
 int calculateInitialFlex(int offset);
@@ -41,10 +41,16 @@ void setup() {
     // Indicate successful calibration load with a quick blink
     blinkLED(LED_GREEN, 3);
   } else {
-    // Indicate calibration is needed with a slow blink
-    blinkLED(LED_RED, 3);
-    // Start calibration process
-    calibrateEMG();
+    int status = 0;
+    while (!status)
+    {
+      // Indicate calibration is needed with a slow blink
+      blinkLED(LED_RED, 3);
+      // Start calibration process
+      status = calibrateEMG();
+    }
+    // Indicate successful calibration load with a quick blink
+    blinkLED(LED_GREEN, 3);
   }
 }
 
@@ -54,8 +60,9 @@ void loop() {
 
 // =======================
 // Calibration Function Implementations
+// Returns status on if calibration was successful
 // =======================
-void calibrateEMG() {
+int calibrateEMG() {
   int offset = calculateOffset();
 
   // Step 1: Relaxed Baseline
@@ -74,12 +81,13 @@ void calibrateEMG() {
   if (flexedBaseline <= relaxedBaseline) {
     // Indicate error with LED_RED blinking
     blinkLED(LED_RED, 5);
-    return;
+    return -1;
   }
 
   // Step 3: Initial Flex Peak
-  indicatePhase(LED_RED);
-  blinkLED(LED_RED, 2); // Blink twice to indicate initial flex phase
+  indicatePhase(LED_YELLOW);
+  blinkLED(LED_YELLOW, 2); // Blink twice to indicate initial flex phase
+  delay(1000);
   int initialFlex = calculateInitialFlex(offset);
 
   // Threshold Calculations
@@ -90,6 +98,7 @@ void calibrateEMG() {
   blinkLED(LED_GREEN, 5);
   // Save calibration data to EEPROM
   saveCalibration(offset, THRES_LOW, THRES_HIGH);
+  return 0;
 }
 
 // =======================
