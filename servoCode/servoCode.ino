@@ -1,5 +1,5 @@
 #include <Servo.h>
-#include <cmath>
+//#include <cmath>
 #define fsrpin1 A0
 #define fsrpin2 A1
 #define fsrpin3 A2
@@ -24,12 +24,12 @@ int fsr[NUM_FSR]; // array for storing force sensor readings
 int lastreading[NUM_FSR];
 int intensity_mod[NUM_FSR];
 int timer[NUM_FSR];
-bool haptics();
+void haptics();
 bool isPressure = false;
 
 // Variables for signal conditioning
-int const THRES_HIGH = 160;
-int const THRES_LOW = 80;
+//int const THRES_HIGH = 160;
+//int const THRES_LOW = 80;
 int const NUM_AVG = 50;
 int emgVals[NUM_AVG]; //array to store trailing average 
 int counter = 0;
@@ -107,7 +107,8 @@ int readEMG(val)
 }
 
 // Checks if there is pressure on the FSRs and vibrates the vibration motors with a tapering off effect
-void haptics(){
+void haptics()
+{
   fsr[0] = analogRead(fsrpin1);
   fsr[1] = analogRead(fsrpin2);
   fsr[2] = analogRead(fsrpin3);
